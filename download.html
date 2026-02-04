@@ -1,0 +1,289 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Download File</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 450px;
+      width: 100%;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 25px;
+      font-size: 40px;
+      color: white;
+    }
+
+    h1 {
+      color: #333;
+      font-size: 28px;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 16px;
+      margin-bottom: 30px;
+      line-height: 1.5;
+    }
+
+    .download-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 16px 40px;
+      font-size: 18px;
+      font-weight: 600;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+      width: 100%;
+      max-width: 280px;
+    }
+
+    .download-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }
+
+    .download-btn:active {
+      transform: translateY(0);
+    }
+
+    .download-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .status {
+      margin-top: 25px;
+      padding: 15px 20px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 500;
+      display: none;
+    }
+
+    .status.show {
+      display: block;
+    }
+
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .status.loading {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+
+    .status-icon {
+      font-size: 18px;
+      margin-right: 8px;
+    }
+
+    .file-info {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 25px;
+      font-size: 14px;
+      color: #555;
+    }
+
+    /* Hidden iframe for download */
+    #downloadFrame {
+      display: none;
+      width: 0;
+      height: 0;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="icon">📥</div>
+    
+    <h1>Your File is Ready</h1>
+    <p class="subtitle">Click the button below to download your file securely.</p>
+    
+    <div class="file-info" id="fileInfo" style="display: none;">
+      <strong>File:</strong> <span id="fileName"></span>
+    </div>
+    
+    <button class="download-btn" id="downloadBtn">
+      <span>⬇</span> Download Now
+    </button>
+    
+    <div class="status" id="status"></div>
+  </div>
+
+  <!-- Hidden iframe for background download -->
+  <iframe id="downloadFrame" name="downloadFrame"></iframe>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const fileUrl = params.get('file');
+
+    const downloadBtn = document.getElementById('downloadBtn');
+    const statusBox = document.getElementById('status');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const downloadFrame = document.getElementById('downloadFrame');
+
+    function showStatus(message, type) {
+      const icons = {
+        success: '✅',
+        error: '❌',
+        loading: '⏳'
+      };
+      
+      statusBox.innerHTML = `<span class="status-icon">${icons[type]}</span>${message}`;
+      statusBox.className = `status ${type} show`;
+    }
+
+    function hideStatus() {
+      statusBox.classList.remove('show');
+    }
+
+    if (!fileUrl) {
+      showStatus('No file provided in URL parameter.', 'error');
+      downloadBtn.disabled = true;
+    } else {
+      // Extract and show filename
+      const urlParts = fileUrl.split('/');
+      let extractedFileName = urlParts[urlParts.length - 1].split('?')[0] || 'download';
+      fileName.textContent = decodeURIComponent(extractedFileName);
+      fileInfo.style.display = 'block';
+    }
+
+    function downloadFile() {
+      try {
+        showStatus('Preparing your download...', 'loading');
+        downloadBtn.disabled = true;
+
+        // Extract filename from URL
+        const urlParts = fileUrl.split('/');
+        let filename = urlParts[urlParts.length - 1].split('?')[0] || 'download.pdf';
+        filename = decodeURIComponent(filename);
+
+        // Method 1: Try creating a download link
+        const link = document.createElement('a');
+        link.href = fileUrl;
+        link.download = filename;
+        link.target = 'downloadFrame'; // Use iframe as target
+        link.style.display = 'none';
+        
+        document.body.appendChild(link);
+        
+        // Trigger download
+        link.click();
+        
+        // Remove link after a moment
+        setTimeout(() => {
+          document.body.removeChild(link);
+        }, 100);
+
+        // Set iframe src as backup method
+        setTimeout(() => {
+          downloadFrame.src = fileUrl;
+        }, 200);
+
+        // Show success message
+        setTimeout(() => {
+          showStatus('Download started successfully!', 'success');
+          downloadBtn.disabled = false;
+        }, 800);
+
+      } catch (err) {
+        console.error('Download failed:', err);
+        showStatus('Download unsuccessful. Please try again.', 'error');
+        downloadBtn.disabled = false;
+      }
+    }
+
+    // Alternative download using form submission
+    function downloadViaForm() {
+      const form = document.createElement('form');
+      form.method = 'GET';
+      form.action = fileUrl;
+      form.target = 'downloadFrame';
+      form.style.display = 'none';
+      
+      document.body.appendChild(form);
+      form.submit();
+      
+      setTimeout(() => {
+        document.body.removeChild(form);
+      }, 100);
+    }
+
+    downloadBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      hideStatus();
+      
+      // Try primary method
+      downloadFile();
+      
+      // Try form method as backup after 1 second
+      setTimeout(() => {
+        downloadViaForm();
+      }, 1000);
+    });
+
+    // Monitor iframe for load event
+    downloadFrame.addEventListener('load', function() {
+      if (this.src && this.src !== 'about:blank') {
+        console.log('Download initiated via iframe');
+      }
+    });
+  </script>
+
+</body>
+</html>
